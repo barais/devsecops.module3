@@ -1010,13 +1010,15 @@ layout: section
 
 # ❓ Questions ?
 
-<div class="mt-6 text-xl opacity-80">
+<div class="mt-8 max-w-2xl mx-auto text-left">
 
-Des questions sur les différents gestionnaires de dépendances ?
+**Ressources :**
+
+- 📄 **Poly du cours** : [télécharger le poly (PDF)](https://raw.githubusercontent.com/barais/devsecops.module3/refs/heads/master/poly/poly.pdf)
+- ➡️ **Cours suivant — Cours 4 — CI/CD** : [https://olivier.barais.fr/devsecops.module4](https://olivier.barais.fr/devsecops.module4)
 
 </div>
 
 <div class="mt-8 text-sm opacity-50">
 Olivier Barais · Module DevSecOps
 </div>
-
