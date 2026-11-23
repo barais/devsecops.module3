@@ -11,6 +11,10 @@ drawings:
 transition: slide-left
 title: Outils de build et gestionnaires de paquets
 mdc: true
+pdf: true
+export: true
+comark: true
+download: true
 ---
 
 # Outils de build et gestionnaires de paquets
