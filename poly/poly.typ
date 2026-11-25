@@ -187,7 +187,7 @@ Le code que nous écrivons directement ne représente qu'une fraction de ce qui 
 Selon le rapport annuel de Sonatype @sonatype-ssc-2023, le nombre de paquets malveillants publiés sur les registres publics (npm, PyPI, Maven Central) a augmenté de 245 % entre 2021 et 2023. Comprendre les outils de build est donc indissociable de comprendre comment sécuriser la chaîne d'approvisionnement logicielle.
 
 #keypoint[
-  Ce cours présente les outils de build et les gestionnaires de paquets des quatre principaux écosystèmes (Java, JavaScript, Python, Rust), puis explique comment les utiliser de manière sécurisée dans le cadre d'une démarche DevSecOps.
+  Ce cours présente les outils de build et les gestionnaires de paquets des quatre principaux écosystèmes (Java, JavaScript, Python, Rust), puis explique comment les utiliser de manière sécurisée dans le cadre d'une démarche DevSecOps, dont les principes sont détaillés dans le DevOps Handbook (@kim2016devops).
 ]
 
 #pagebreak()
@@ -479,7 +479,7 @@ pnpm install --frozen-lockfile   # équivalent de npm ci
 
 === Bun — rapidité extrême
 
-Bun (@bun-docs) est à la fois un runtime JavaScript (alternative à Node.js) et un gestionnaire de paquets. Écrit en Zig, il est en moyenne 20 fois plus rapide que npm pour l'installation des dépendances. Il est compatible avec `package.json` et peut remplacer npm sans modification du projet.
+Bun (@bun-docs) est à la fois un runtime JavaScript (alternative à Node.js) et un gestionnaire de paquets. Écrit en Zig, il annonce des installations jusqu'à 20 fois plus rapides que npm (chiffres annoncés par ses auteurs). Il est compatible avec `package.json` et peut remplacer npm sans modification du projet.
 
 ```bash
 bun install         # installe depuis package.json
@@ -526,7 +526,7 @@ npm run build    # build de production via Rollup
 
 === esbuild
 
-esbuild (@esbuild-docs), écrit en Go par Evan Frisby, est le moteur de transformation le plus rapide disponible. Il est utilisé en interne par Vite, Parcel et de nombreux autres outils. Son API permet de l'intégrer dans des pipelines de build personnalisés.
+esbuild (@esbuild-docs), écrit en Go par Evan Wallace (cofondateur de Figma), est le moteur de transformation le plus rapide disponible. Il est utilisé en interne par Vite, Parcel et de nombreux autres outils. Son API permet de l'intégrer dans des pipelines de build personnalisés.
 
 === Tableau comparatif
 
@@ -673,6 +673,27 @@ poetry build                 # crée les distributions wheel et sdist
 
 Le fichier `pyproject.toml` (PEP 518, 2016) est devenu le standard de configuration Python moderne, utilisé par Poetry, Flit, Hatch et d'autres outils.
 
+=== uv — la nouvelle génération
+
+uv (@uv-docs), développé par Astral en Rust, est un gestionnaire de paquets et de projets Python conçu pour unifier, en un seul outil et beaucoup plus rapidement, pip, pip-tools, virtualenv, pipenv, pyenv et Poetry. C'est l'approche « tout-en-un » que l'écosystème Node.js connaît déjà avec les gestionnaires modernes.
+
+```bash
+uv init mon-projet        # crée un projet (pyproject.toml)
+cd mon-projet
+uv add requests           # met à jour pyproject.toml + verrouille uv.lock
+uv run python main.py     # crée l'environnement isolé puis exécute
+uv sync                   # installe l'environnement exactement d'après uv.lock
+```
+
+Les atouts de uv en matière de reproductibilité et de sécurité :
+
+- *Vitesse* — la résolution et l'installation sont généralement 10 à 100 fois plus rapides que pip.
+- *Un seul verrou* — `uv.lock` est un fichier de verrouillage déterministe et multi-plateformes, avec versions épinglées et *checksums* SHA-256 vérifiés des artefacts téléchargés.
+- *Compatibilité pip* — deux modes coexistent : le mode « projet » (`uv add`, `uv sync`) et le mode « pip » (`uv pip install -r requirements.txt`), ce qui rend la migration progressive et sans rupture.
+- *Audit intégré* — `uv audit` compare les dépendances à une base de vulnérabilités connues.
+
+C'est un modèle « lock file comme mécanisme de sécurité » au même titre que `package-lock.json` côté Node.js.
+
 #figure(
   table(
     columns: (auto, auto, auto, auto),
@@ -683,6 +704,7 @@ Le fichier `pyproject.toml` (PEP 518, 2016) est devenu le standard de configurat
     [pip-tools], [`requirements.txt`], [Non], [Partiel],
     [Pipenv], [`Pipfile.lock`], [Oui], [Oui],
     [Poetry], [`poetry.lock`], [Oui], [Oui],
+    [uv], [`uv.lock`], [Oui], [Oui],
   ),
   caption: "Comparaison des gestionnaires de paquets Python",
 )
@@ -711,6 +733,8 @@ cargo test                   # exécute les tests
 cargo doc --open             # génère et ouvre la documentation
 cargo publish                # publie sur crates.io
 ```
+
+La publication des nouvelles crates se fait sur le registre communautaire crates.io (@crates-io).
 
 == Le manifeste Cargo.toml
 
@@ -774,7 +798,7 @@ checksum = "3fb1c873e1b9b056a4dc4c0c198b24c3ffa059243875552b2bd0933b1aee4ce2"
 
 = Sécuriser ses dépendances
 
-La supply chain logicielle est devenue un vecteur d'attaque majeur. L'étude de Zimmermann et al. @zimmermann2019malicious a montré que 40 % des paquets npm les plus populaires dépendent d'au moins un paquet maintenu par une seule personne, ce qui en fait une cible de choix.
+La supply chain logicielle est devenue un vecteur d'attaque majeur. Les analyses empiriques des réseaux de dépendances montrent l'ampleur du phénomène à l'échelle des écosystèmes (@decan2019npm). L'étude de Zimmermann et al. @zimmermann2019malicious a montré que 40 % des paquets npm les plus populaires dépendent d'au moins un paquet maintenu par une seule personne, ce qui en fait une cible de choix.
 
 == Incidents notables
 
@@ -817,7 +841,8 @@ lodash    →  1odash, Iodash, lodahs
 
 Selon le rapport Sonatype @sonatype-ssc-2023, le nombre de paquets typosquattés détectés a augmenté de 315 % en 2023 par rapport à 2022.
 
-**Mécanismes de défense :**
+*Mécanismes de défense :*
+
 - Vérifier soigneusement l'orthographe et le nombre de téléchargements avant d'installer un paquet
 - Utiliser un registre privé qui bloque les paquets non approuvés (voir section 6.5)
 - Activer la protection de namespace (npm Organizations)
@@ -845,7 +870,7 @@ pip-sync requirements.txt
 poetry install
 ```
 
-**Ce que le lock file empêche :**
+*Ce que le lock file empêche :*
 - La résolution d'une version différente (et potentiellement compromise) lors d'un rebuild
 - L'injection silencieuse d'une nouvelle version d'une dépendance transitive
 - Les variations de comportement entre environnements (dev / CI / prod)
@@ -874,7 +899,11 @@ cargo audit fix
 mvn org.owasp:dependency-check-maven:check
 ```
 
+Chaque écosystème dispose de son outil dédié, documenté auprès du registre correspondant : `npm audit` (@npm-audit), `pip-audit` (@pip-audit), `cargo audit` (@cargo-audit) et l'OWASP Dependency-Check pour Maven (@owasp-dc).
+
 Ces commandes interrogent la base NVD (National Vulnerability Database) du NIST (@owasp-dc) et renvoient la liste des CVE affectant vos dépendances avec leur score CVSS (Common Vulnerability Scoring System).
+
+Pour la production conteneurisée, l'audit des dépendances se prolonge au niveau des images applicatives : des scanners de registre comme Trivy ou Grype analysent les images Docker (système, dépendances, binaries) au moment du build, ce qui complète la chaîne de défense au-delà du code source.
 
 #keypoint[
   Intégrer ces commandes dans le pipeline CI/CD est la pratique minimale pour un projet DevSecOps. Un build doit échouer si des vulnérabilités de sévérité « haute » ou « critique » sont détectées dans les dépendances.
@@ -884,13 +913,15 @@ Ces commandes interrogent la base NVD (National Vulnerability Database) du NIST 
 
 Un SBOM est une liste machine-readable de *tous les composants* d'une application : dépendances directes, transitives, versions, licences, hachages. C'est l'équivalent logiciel d'une liste d'ingrédients alimentaire.
 
-**Pourquoi c'est devenu incontournable :**
+*Pourquoi c'est devenu incontournable :*
 - L'Executive Order américain 14028 (mai 2021) @us-eo-sbom exige des SBOMs pour tout logiciel vendu au gouvernement fédéral américain.
 - Le Cyber Resilience Act européen @eu-cra (adopté en mars 2024) impose des exigences similaires pour les produits numériques mis sur le marché de l'UE.
 
-**Formats standards :**
+*Formats standards :*
 - *CycloneDX* (OWASP, @cyclonedx-spec) — le plus adopté dans la communauté sécurité, formats JSON et XML.
 - *SPDX* (Linux Foundation, @spdx-spec) — standard ISO/IEC 5962:2021, historiquement orienté licences.
+
+CycloneDX est supporté sur tous les écosystèmes, y compris via le plugin Maven dédié (@cyclonedx-maven) :
 
 ```bash
 # Maven → CycloneDX
